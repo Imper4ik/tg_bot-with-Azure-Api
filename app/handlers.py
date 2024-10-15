@@ -4,11 +4,12 @@ from aiogram.types import Message
 from app.conver_voice_in_text import speech_to_text
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import StatesGroup, State
+from app.translate_text import translate_text
 
 import app.keyboards as kb
 import os
 
-from app.translate_text import translate_text
+
 
 router = Router()
 

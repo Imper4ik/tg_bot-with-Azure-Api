@@ -18,4 +18,3 @@ urls = InlineKeyboardMarkup(
         [InlineKeyboardButton(text='ChatGpt', url='https://chatgpt.com')]
     ]
 )
-

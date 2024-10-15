@@ -1,9 +1,10 @@
+from pydub import AudioSegment
+from dotenv import load_dotenv
+
 import time
 import azure.cognitiveservices.speech as speechsdk
 import logging
 import os
-from pydub import AudioSegment
-from dotenv import load_dotenv
 
 
 # Загрузить переменные окружения из файла .env

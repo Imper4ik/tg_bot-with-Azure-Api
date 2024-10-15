@@ -1,8 +1,9 @@
+from dotenv import load_dotenv
+
 import requests
 import uuid
-import json
 import os
-from dotenv import load_dotenv
+
 
 # Загрузить переменные окружения из файла .env
 load_dotenv()

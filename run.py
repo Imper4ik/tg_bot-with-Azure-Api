@@ -1,12 +1,11 @@
-import asyncio
-import os
-
-import aiogram
-import logging
 from aiogram.fsm.storage.memory import MemoryStorage
 from aiogram import Bot, Dispatcher
 from app.handlers import router
 from dotenv import load_dotenv
+
+import asyncio
+import os
+import logging
 
 # Загрузить переменные окружения из файла .env
 load_dotenv()
