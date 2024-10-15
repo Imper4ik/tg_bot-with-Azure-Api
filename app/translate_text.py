@@ -31,7 +31,7 @@ def detect_language(text):
         return None
 
 
-def translate_text(text, to_langs=['pl']):
+def translate_text(text, to_langs):
     # Определяем язык текста перед переводом
     from_lang = detect_language(text)
 
@@ -45,7 +45,7 @@ def translate_text(text, to_langs=['pl']):
     params = {
         'api-version': '3.0',
         'from': from_lang,
-        'to': to_langs
+        'to': to_langs  # Используем переданный язык перевода
     }
 
     headers = {
@@ -65,9 +65,8 @@ def translate_text(text, to_langs=['pl']):
         translations = response.json()
 
         # Сохраняем переводы в текстовый файл
-        with open('translated_text.txt', 'a', encoding='utf-8') as f:  # 'a' для добавления в файл
+        with open('translated_text.txt', 'w', encoding='utf-8') as f:
             for translation in translations:
-                # Записываем переводы в файл
                 for trans in translation['translations']:
                     f.write(f"{trans['to']}: {trans['text']}\n")
 
@@ -76,3 +75,4 @@ def translate_text(text, to_langs=['pl']):
     except requests.exceptions.RequestException as e:
         print(f"Ошибка: {e}")
         return None
+
