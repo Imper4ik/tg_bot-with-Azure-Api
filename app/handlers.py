@@ -22,12 +22,12 @@ class TranslateStates(StatesGroup):
 async def cmd_start(message: types.Message):
     await message.answer('Hello')
     await message.answer('Список команд: \n '
-                         '1 - /start \n'
-                         '2 - /show \n'
-                         '3 - /url \n'
-                         '4 - /help \n'
-                         '5 - /Voice_in_text \n'
-                         '6 - /Translate', reply_markup=kb.commands_keyboard)
+                         '1 - start \n'
+                         '2 - show \n'
+                         '3 - links \n'
+                         '4 - help \n'
+                         '5 - Voice_in_text \n'
+                         '6 - Translate', reply_markup=kb.commands_keyboard)
 
 
 @router.message(F.text)
@@ -45,17 +45,17 @@ async def handle_text_commands(message: Message, state: FSMContext):
         await handle_translate_text(message, state)
     else:
         # Обрабатываем обычные команды
-        if message.text == '/start':
+        if message.text == 'start':
             await cmd_start(message)
-        elif message.text == '/show':
+        elif message.text == 'show':
             await show(message)
-        elif message.text == '/url':
+        elif message.text == 'links':
             await url(message)
-        elif message.text == '/help':
+        elif message.text == 'help':
             await get_help(message)
-        elif message.text == '/Voice_in_text':
+        elif message.text == 'Voice_in_text':
             await request_voice_message(message)
-        elif message.text == '/Translate':
+        elif message.text == 'Translate':
             await start_translate(message, state)
         else:
             await message.reply("Неизвестная команда. Пожалуйста, выберите пункт из меню.")
@@ -66,7 +66,7 @@ async def show(message: Message):
     await message.reply(f'Привет, твой id: {message.from_user.id}\nИмя: {message.from_user.first_name}')
 
 
-@router.message(Command('url'))
+@router.message(Command('links'))
 async def url(message: Message):
     await message.reply('Твои добавленные ссылки:', reply_markup=kb.urls)
 
