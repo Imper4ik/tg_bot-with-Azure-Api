@@ -1,0 +1,10 @@
+pip:
+  aiogram
+  requests
+  pydub
+api + pip:
+  azure-cognitiveservices-speech
+  azure-ai-textanalytics
+PATH
+  ffmpeg
+
