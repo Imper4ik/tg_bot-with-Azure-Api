@@ -2,6 +2,7 @@ pip:
   aiogram
   requests
   pydub
+  dotenv
 api + pip:
   azure-cognitiveservices-speech
   azure-ai-textanalytics
