@@ -27,7 +27,7 @@ def detect_language(text):
         user_language = response.json()[0]['language']  # Вернем код языка
         return user_language
     except requests.exceptions.RequestException as e:
-        print(f"Ошибка: {e}")
+        print(f"Ошибка при определении языка: {e}")
         return None
 
 
@@ -73,6 +73,8 @@ def translate_text(text, to_langs):
         return translations  # Возвращаем переводы для дальнейшего использования
 
     except requests.exceptions.RequestException as e:
-        print(f"Ошибка: {e}")
+        print(f"Ошибка при переводе текста: {e}")
+        # Выводим ответ сервера, если доступно
+        if e.response is not None:
+            print(f"Ответ сервера: {e.response.text}")
         return None
-

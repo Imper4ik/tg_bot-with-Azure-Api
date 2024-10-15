@@ -33,20 +33,32 @@ async def cmd_start(message: types.Message):
 @router.message(F.text)
 async def handle_text_commands(message: Message, state: FSMContext):
     print(f"Received command: {message.text}")  # Логируем полученные команды
-    if message.text == '1 - /start':
-        await cmd_start(message)
-    elif message.text == '2 - /show':
-        await show(message)
-    elif message.text == '3 - /url':
-        await url(message)
-    elif message.text == '4 - /help':
-        await get_help(message)
-    elif message.text == '5 - /Voice_in_text':
-        await request_voice_message(message)
-    elif message.text == '6 - /Translate':
-        await start_translate(message, state)
+
+    # Получаем текущее состояние
+    current_state = await state.get_state()
+
+    if current_state == TranslateStates.waiting_for_language.state:
+        # Если состояние ожидания языка, обрабатываем ввод как выбор языка
+        await choose_language(message, state)
+    elif current_state == TranslateStates.waiting_for_text.state:
+        # Если состояние ожидания текста, обрабатываем ввод как текст для перевода
+        await handle_translate_text(message, state)
     else:
-        await message.reply("Неизвестная команда. Пожалуйста, выберите пункт из меню.")
+        # Обрабатываем обычные команды
+        if message.text == '/start':
+            await cmd_start(message)
+        elif message.text == '/show':
+            await show(message)
+        elif message.text == '/url':
+            await url(message)
+        elif message.text == '/help':
+            await get_help(message)
+        elif message.text == '/Voice_in_text':
+            await request_voice_message(message)
+        elif message.text == '/Translate':
+            await start_translate(message, state)
+        else:
+            await message.reply("Неизвестная команда. Пожалуйста, выберите пункт из меню.")
 
 
 @router.message(Command('show'))
@@ -78,19 +90,13 @@ async def handle_voice_message(message: Message):
     await message.bot.download_file(file_path.file_path, voice_file)
     text = speech_to_text(voice_file)
     await message.reply(text)
+
     with open('text', "w+") as voice_file:
         voice_file.write(text)
 
     os.remove(voice_file)
 
 
-@router.message(Command('Translate'))
-async def start_translate(message: types.Message, state: FSMContext):
-    await message.reply("Пожалуйста, напишите текст, который хотите перевести.")
-    await state.set_state(TranslateStates.waiting_for_text)
-
-
-# Команда для начала перевода
 @router.message(Command('Translate'))
 async def start_translate(message: types.Message, state: FSMContext):
     await message.reply("Пожалуйста, выберите язык на который вы хотите перевести (например: 'en', 'pl', 'de').")
@@ -101,8 +107,8 @@ async def start_translate(message: types.Message, state: FSMContext):
 @router.message(TranslateStates.waiting_for_language)
 async def choose_language(message: types.Message, state: FSMContext):
     selected_language = message.text.strip().lower()
-    # Проверка правильности введенного языка
-    if selected_language:  # Добавьте нужные языки
+    # Проверка правильности введенного языка (можете добавить дополнительные проверки)
+    if selected_language:
         await state.update_data(selected_language=selected_language)
         await message.reply("Теперь введите текст для перевода.")
         await state.set_state(TranslateStates.waiting_for_text)
@@ -132,9 +138,3 @@ async def handle_translate_text(message: types.Message, state: FSMContext):
         await message.reply("Ошибка при переводе текста.")
 
     await state.clear()
-
-
-
-
-
-
