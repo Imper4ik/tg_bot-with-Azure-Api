@@ -3,7 +3,14 @@ import azure.cognitiveservices.speech as speechsdk
 import logging
 import os
 from pydub import AudioSegment
-from config import azure_speech_key, azure_region
+from dotenv import load_dotenv
+
+
+# Загрузить переменные окружения из файла .env
+load_dotenv()
+
+azure_speech_key = os.getenv('azure_speech_key ')
+azure_region = os.getenv('azure_region')
 
 # Настройка логирования
 logging.basicConfig(
