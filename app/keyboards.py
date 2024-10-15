@@ -3,10 +3,10 @@ from aiogram.types import ReplyKeyboardMarkup, KeyboardButton, InlineKeyboardBut
 # Создание клавиатуры с командами
 commands_keyboard = ReplyKeyboardMarkup(
     keyboard=[
-        [KeyboardButton(text='/start'), KeyboardButton(text='/show')],
-        [KeyboardButton(text='/url'), KeyboardButton(text='/help')],
-        [KeyboardButton(text='/Voice_in_text')],
-        [KeyboardButton(text='/Translate')]
+        [KeyboardButton(text='start'), KeyboardButton(text='show')],
+        [KeyboardButton(text='links'), KeyboardButton(text='help')],
+        [KeyboardButton(text='Voice_in_text')],
+        [KeyboardButton(text='Translate')]
     ],
     resize_keyboard=True,  # Уменьшает размер клавиатуры под размер кнопок
     input_field_placeholder='Выберите пункт меню.'  # Место для ввода текста
