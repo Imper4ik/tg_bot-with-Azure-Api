@@ -1,7 +1,16 @@
 import requests
 import uuid
 import json
-from config import azure_translate_key, azure_translate_region, azure_translate_endpoint
+import os
+from dotenv import load_dotenv
+
+# Загрузить переменные окружения из файла .env
+load_dotenv()
+
+# Получаем ключи и URL из переменных окружения
+azure_translate_key = os.getenv('azure_translate_key')
+azure_translate_region = os.getenv('azure_translate_region')
+azure_translate_endpoint = os.getenv('azure_translate_endpoint')
 
 
 def detect_language(text):
