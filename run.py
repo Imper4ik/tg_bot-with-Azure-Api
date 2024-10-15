@@ -1,13 +1,17 @@
 import asyncio
+import os
+
 import aiogram
 import logging
 from aiogram.fsm.storage.memory import MemoryStorage
 from aiogram import Bot, Dispatcher
-from config import telegram_bot_token
 from app.handlers import router
+from dotenv import load_dotenv
 
+# Загрузить переменные окружения из файла .env
+load_dotenv()
 
-bot = Bot(token=telegram_bot_token)
+bot = Bot(token=os.getenv('telegram_bot_token'))
 
 # Инициализация хранилища для FSM (в памяти)
 storage = MemoryStorage()
