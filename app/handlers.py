@@ -1,3 +1,5 @@
+import time
+
 from aiogram import F, Router, types
 from aiogram.filters import CommandStart, Command
 from aiogram.types import Message
@@ -10,8 +12,34 @@ import app.keyboards as kb
 import os
 
 
-
 router = Router()
+
+
+# Словарь для хранения времени сообщений пользователей
+user_message_times = {}
+
+# Максимальное количество сообщений в минуту
+MAX_MESSAGES_PER_MINUTE = 10
+TIME_FRAME = 60  # 60 секунд
+
+
+# Функция для проверки, не превышен ли лимит сообщений
+def is_user_spamming(user_id: int) -> bool:
+    current_time = time.time()
+
+    if user_id not in user_message_times:
+        user_message_times[user_id] = []
+
+    # Очищаем старые записи сообщений (более 1 минуты назад)
+    user_message_times[user_id] = [timestamp for timestamp in user_message_times[user_id] if current_time - timestamp < TIME_FRAME]
+
+    # Проверяем, не превышено ли количество сообщений
+    if len(user_message_times[user_id]) >= MAX_MESSAGES_PER_MINUTE:
+        return True
+
+    # Добавляем временную метку нового сообщения
+    user_message_times[user_id].append(current_time)
+    return False
 
 
 class TranslateStates(StatesGroup):
@@ -33,19 +61,21 @@ async def cmd_start(message: types.Message):
 
 @router.message(F.text)
 async def handle_text_commands(message: Message, state: FSMContext):
-    print(f"Received command: {message.text}")  # Логируем полученные команды
+    user_id = message.from_user.id
 
-    # Получаем текущее состояние
+    # Проверяем, не превышен ли лимит сообщений
+    if is_user_spamming(user_id):
+        await message.reply("Вы отправляете слишком много сообщений. Пожалуйста, подождите немного.")
+        return
+
+    # Обрабатываем команды или состояния
     current_state = await state.get_state()
 
     if current_state == TranslateStates.waiting_for_language.state:
-        # Если состояние ожидания языка, обрабатываем ввод как выбор языка
         await choose_language(message, state)
     elif current_state == TranslateStates.waiting_for_text.state:
-        # Если состояние ожидания текста, обрабатываем ввод как текст для перевода
         await handle_translate_text(message, state)
     else:
-        # Обрабатываем обычные команды
         if message.text == 'start':
             await cmd_start(message)
         elif message.text == 'show':
