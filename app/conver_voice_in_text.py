@@ -10,7 +10,7 @@ import os
 # Загрузить переменные окружения из файла .env
 load_dotenv()
 
-azure_speech_key = os.getenv('azure_speech_key ')
+azure_speech_key = os.getenv('azure_speech_key')
 azure_region = os.getenv('azure_region')
 
 # Настройка логирования
