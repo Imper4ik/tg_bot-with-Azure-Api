@@ -2,7 +2,7 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
-      <module fileurl="file://$PROJECT_DIR$/.idea/Freelance.iml" filepath="$PROJECT_DIR$/.idea/Freelance.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/tg_bot-with-Azure-Api.iml" filepath="$PROJECT_DIR$/.idea/tg_bot-with-Azure-Api.iml" />
     </modules>
   </component>
 </project>
