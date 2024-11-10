@@ -19,25 +19,8 @@ router = Router()
 user_message_times = {}
 
 # Максимальное количество сообщений в минуту
-MAX_MESSAGES_PER_MINUTE = 5
-TIME_FRAME = 10  # 10 секунд
-
-
-class TranslateStates(StatesGroup):
-    waiting_for_language = State()
-    waiting_for_text = State()
-
-
-@router.message(CommandStart())
-async def cmd_start(message: types.Message):
-    await message.answer('Hello')
-    await message.answer('Список команд: \n '
-                         '1 - start \n'
-                         '2 - show \n'
-                         '3 - links \n'
-                         '4 - help \n'
-                         '5 - Voice_in_text \n'
-                         '6 - Translate', reply_markup=kb.commands_keyboard)
+MAX_MESSAGES_PER_MINUTE = 10
+TIME_FRAME = 60  # 60 секунд
 
 
 # Функция для проверки, не превышен ли лимит сообщений
@@ -57,6 +40,23 @@ def is_user_spamming(user_id: int) -> bool:
     # Добавляем временную метку нового сообщения
     user_message_times[user_id].append(current_time)
     return False
+
+
+class TranslateStates(StatesGroup):
+    waiting_for_language = State()
+    waiting_for_text = State()
+
+
+@router.message(CommandStart())
+async def cmd_start(message: types.Message):
+    await message.answer('Hello')
+    await message.answer('Список команд: \n '
+                         '1 - start \n'
+                         '2 - show \n'
+                         '3 - links \n'
+                         '4 - help \n'
+                         '5 - Voice_in_text \n'
+                         '6 - Translate', reply_markup=kb.commands_keyboard)
 
 
 @router.message(F.text)
@@ -125,8 +125,7 @@ async def handle_voice_message(message: Message):
     with open('text', "w+") as voice_file:
         voice_file.write(text)
 
-    print(voice_file)
-    os.remove(str(voice_file))
+    os.remove(voice_file)
 
 
 @router.message(Command('Translate'))
