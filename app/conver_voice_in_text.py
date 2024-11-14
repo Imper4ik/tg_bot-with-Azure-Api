@@ -1,11 +1,9 @@
-from pydub import AudioSegment
-from dotenv import load_dotenv
-
+import ffmpeg
+import os
+import logging
 import time
 import azure.cognitiveservices.speech as speechsdk
-import logging
-import os
-
+from dotenv import load_dotenv
 
 # Загрузить переменные окружения из файла .env
 load_dotenv()
@@ -26,11 +24,10 @@ def speech_to_text(voice_file):
         logging.error("Аудиофайл не найден: %s", voice_file)
         return "Ошибка: Аудиофайл не найден."
 
-    # Преобразование OGG в WAV
+    # Преобразование OGG в WAV с использованием ffmpeg
     wav_file = voice_file.replace('.ogg', '.wav')
     try:
-        audio_segment = AudioSegment.from_file(voice_file, format='ogg')
-        audio_segment.export(wav_file, format='wav')
+        ffmpeg.input(voice_file).output(wav_file).run()
     except Exception as e:
         logging.error("Ошибка при конвертации файла: %s", str(e))
         return "Ошибка при конвертации файла"
@@ -67,7 +64,6 @@ def speech_to_text(voice_file):
             try:
                 os.remove(wav_file)
                 logging.info("Файл %s успешно удален.", wav_file)
-
             except Exception as e:
-                    logging.error("Не удалось удалить файл %s: %s", wav_file, str(e))
-                    time.sleep(2)  # Ждем перед повторной попыткой
+                logging.error("Не удалось удалить файл %s: %s", wav_file, str(e))
+                time.sleep(2)  # Ждем перед повторной попыткой
