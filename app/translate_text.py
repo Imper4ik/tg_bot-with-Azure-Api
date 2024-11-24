@@ -15,13 +15,11 @@ azure_translate_endpoint = os.getenv('azure_translate_endpoint')
 
 
 def detect_language(text):
-    path = '/detect'
-    constructed_url = azure_translate_endpoint + path
+    path = '/translate'
+    constructed_url = f"{azure_translate_endpoint.rstrip('/')}{path}"  # Исправленный путь
+    print(f"URL для определения языка: {constructed_url}")  # Для отладки
 
-    params = {
-        'api-version': '3.0'
-    }
-
+    params = {'api-version': '3.0', 'to': 'en'}  # Перевод на английский как способ получить язык
     headers = {
         'Ocp-Apim-Subscription-Key': azure_translate_key,
         'Ocp-Apim-Subscription-Region': azure_translate_region,
@@ -34,10 +32,16 @@ def detect_language(text):
     try:
         response = requests.post(constructed_url, params=params, headers=headers, json=body)
         response.raise_for_status()
-        user_language = response.json()[0]['language']  # Вернем код языка
-        return user_language
+        translations = response.json()
+
+        # Определяем язык из ответа API
+        detected_language = translations[0]['detectedLanguage']['language']
+        print(f"Определённый язык: {detected_language}")  # Для отладки
+        return detected_language
     except requests.exceptions.RequestException as e:
         print(f"Ошибка при определении языка: {e}")
+        if e.response is not None:
+            print(f"Ответ сервера: {e.response.text}")  # Отладочная информация
         return None
 
 
@@ -50,12 +54,13 @@ def translate_text(text, to_langs):
         return None
 
     path = '/translate'
-    constructed_url = azure_translate_endpoint + path
+    constructed_url = f"{azure_translate_endpoint.rstrip('/')}{path}"  # Формируем полный URL
+    print(f"URL для перевода: {constructed_url}")  # Отладка
 
     params = {
         'api-version': '3.0',
         'from': from_lang,
-        'to': to_langs  # Используем переданный язык перевода
+        'to': to_langs
     }
 
     headers = {
@@ -70,21 +75,10 @@ def translate_text(text, to_langs):
     try:
         response = requests.post(constructed_url, params=params, headers=headers, json=body)
         response.raise_for_status()
-
-        # Получаем результаты перевода
-        translations = response.json()
-
-        # Сохраняем переводы в текстовый файл
-        with open('translated_text.txt', 'w', encoding='utf-8') as f:
-            for translation in translations:
-                for trans in translation['translations']:
-                    f.write(f"{trans['to']}: {trans['text']}\n")
-
-        return translations  # Возвращаем переводы для дальнейшего использования
-
+        print(f"Ответ API translate_text: {response.json()}")  # Отладка
+        return response.json()
     except requests.exceptions.RequestException as e:
         print(f"Ошибка при переводе текста: {e}")
-        # Выводим ответ сервера, если доступно
         if e.response is not None:
-            print(f"Ответ сервера: {e.response.text}")
+            print(f"Ответ сервера: {e.response.text}")  # Отладка
         return None
