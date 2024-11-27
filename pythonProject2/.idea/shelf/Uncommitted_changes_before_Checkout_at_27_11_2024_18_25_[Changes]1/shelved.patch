@@ -1,0 +1,18 @@
+Index: .idea/pythonProject2.iml
+===================================================================
+diff --git a/.idea/pythonProject2.iml b/.idea/pythonProject2.iml
+deleted file mode 100644
+--- a/.idea/pythonProject2.iml	
++++ /dev/null	
+@@ -1,10 +0,0 @@
+-<?xml version="1.0" encoding="UTF-8"?>
+-<module version="4">
+-  <component name="PyDocumentationSettings">
+-    <option name="format" value="NUMPY" />
+-    <option name="myDocStringFormat" value="NumPy" />
+-  </component>
+-  <component name="TestRunnerService">
+-    <option name="PROJECT_TEST_RUNNER" value="py.test" />
+-  </component>
+-</module>
+\ No newline at end of file
