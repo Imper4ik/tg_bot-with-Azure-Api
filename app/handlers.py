@@ -2,11 +2,12 @@ import time
 
 from aiogram import F, Router, types
 from aiogram.filters import CommandStart, Command
-from aiogram.types import Message
+from aiogram.types import Message, CallbackQuery
 from app.conver_voice_in_text import speech_to_text
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import StatesGroup, State
 from app.translate_text import translate_text
+
 
 import app.keyboards as kb
 import os
@@ -49,14 +50,14 @@ class TranslateStates(StatesGroup):
 
 @router.message(CommandStart())
 async def cmd_start(message: types.Message):
-    await message.answer('Hello')
-    await message.answer('Список команд: \n '
-                         '1 - start \n'
-                         '2 - show \n'
+    await message.answer('full commands: \n '
+                         '1 - full commands \n'
+                         '2 - show your information \n'
                          '3 - links \n'
                          '4 - help \n'
-                         '5 - Voice_in_text \n'
-                         '6 - Translate', reply_markup=kb.commands_keyboard)
+                         '5 - language_interface\n'
+                         '6 - Voice_in_text \n'
+                         '7 - Translate', reply_markup=kb.commands_keyboard)
 
 
 @router.message(F.text)
@@ -76,14 +77,16 @@ async def handle_text_commands(message: Message, state: FSMContext):
     elif current_state == TranslateStates.waiting_for_text.state:
         await handle_translate_text(message, state)
     else:
-        if message.text == 'start':
+        if message.text == 'full commands':
             await cmd_start(message)
-        elif message.text == 'show':
+        elif message.text == 'show your information':
             await show(message)
         elif message.text == 'links':
             await url(message)
         elif message.text == 'help':
             await get_help(message)
+        elif message.text == 'language_interface':
+           await language_interface(message)
         elif message.text == 'Voice_in_text':
             await request_voice_message(message)
         elif message.text == 'Translate':
@@ -105,6 +108,31 @@ async def url(message: Message):
 @router.message(Command('help'))
 async def get_help(message: types.Message):
     await message.answer('Ссылка на телеграмм разработчика: @Mando_Grogu')
+
+
+@router.message(Command('language_interface'))
+async def language_interface(message: types.Message):
+    await message.reply("Please choose your language:", reply_markup=kb.language_interface)
+
+
+@router.callback_query()
+async def change_language(call: CallbackQuery, state: FSMContext):
+    user_id = call.from_user.id
+    language_code = call.data.split('_')[1]  # Получаем код языка, например 'en' для английского
+
+    # Сохраняем выбранный язык в FSM
+    await state.update_data(language=language_code)
+
+    # Отвечаем пользователю
+    if language_code == 'en':
+        await call.message.answer("Language set to English. Use /start to see changes.")
+    elif language_code == 'ru':
+        await call.message.answer("Язык интерфейса изменен на русский. Используйте /start, чтобы увидеть изменения.")
+    elif language_code == 'pl':
+        await call.message.answer("Język interfejsu zmieniony na polski. Użyj /start, aby zobaczyć zmiany.")
+
+    # Убираем клавиатуру после выбора
+    await call.message.edit_reply_markup()
 
 
 @router.message(Command('Voice_in_text'))
