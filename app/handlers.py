@@ -2,16 +2,22 @@ import time
 
 from aiogram import F, Router, types
 from aiogram.filters import CommandStart, Command
-from aiogram.types import Message, CallbackQuery
+from aiogram.types import Message, CallbackQuery, FSInputFile
+from dotenv import load_dotenv
+
 from app.conver_voice_in_text import speech_to_text
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import StatesGroup, State
+
+from app.text_into_speech import TextToSpeech
 from app.translate_text import translate_text
 
 
 import app.keyboards as kb
 import os
 
+# Загрузить переменные окружения из файла .env
+load_dotenv()
 
 router = Router()
 
@@ -48,6 +54,10 @@ class TranslateStates(StatesGroup):
     waiting_for_text = State()
 
 
+class SpeechStates(StatesGroup):
+    waiting_for_speech_text = State()
+
+
 @router.message(CommandStart())
 async def cmd_start(message: types.Message):
     await message.answer('full commands: \n '
@@ -57,7 +67,8 @@ async def cmd_start(message: types.Message):
                          '4 - help \n'
                          '5 - language_interface\n'
                          '6 - Voice_in_text \n'
-                         '7 - Translate', reply_markup=kb.commands_keyboard)
+                         '7 - Translate \n'
+                         '8 - Text_to_Speech', reply_markup=kb.commands_keyboard)
 
 
 @router.message(F.text)
@@ -76,6 +87,8 @@ async def handle_text_commands(message: Message, state: FSMContext):
         await choose_language(message, state)
     elif current_state == TranslateStates.waiting_for_text.state:
         await handle_translate_text(message, state)
+    elif current_state == SpeechStates.waiting_for_speech_text.state:
+        await handle_text_to_speech(message, state)
     else:
         if message.text == 'full commands':
             await cmd_start(message)
@@ -91,6 +104,8 @@ async def handle_text_commands(message: Message, state: FSMContext):
             await request_voice_message(message)
         elif message.text == 'Translate':
             await start_translate(message, state)
+        elif message.text == 'Text_to_Speech':
+            await request_text_for_speech(message, state)
         else:
             await message.reply("Неизвестная команда. Пожалуйста, выберите пункт из меню.")
 
@@ -197,3 +212,65 @@ async def handle_translate_text(message: types.Message, state: FSMContext):
         await message.reply("Ошибка при переводе текста.")
 
     await state.clear()
+
+
+@router.message(Command('Text_to_Speech'))
+async def request_text_for_speech(message: types.Message, state: FSMContext):
+    # Запрашиваем у пользователя текст для озвучивания
+    await message.reply("Введите текст, который вы хотите озвучить. (en)")
+
+    # Логируем текущие состояния для отладки
+    current_state = await state.get_state()
+    print(f"Текущее состояние: {current_state}")
+
+    # Переходим в состояние ожидания текста для озвучки
+    await state.set_state(SpeechStates.waiting_for_speech_text)
+
+
+@router.message(SpeechStates.waiting_for_speech_text)
+async def handle_text_to_speech(message: types.Message, state: FSMContext):
+    # Логируем текущее состояние
+    current_state = await state.get_state()
+    print(f"Текущее состояние перед обработкой текста: {current_state}")
+
+    text_to_speech = message.text
+
+    # Убедимся, что текст не превышает лимит
+    if len(text_to_speech) > 3000:  # AWS Polly поддерживает до 3000 символов за раз
+        await message.reply("Текст слишком длинный. Пожалуйста, введите текст до 3000 символов.")
+        return
+
+    # Инициализация TextToSpeech с правильными ключами
+    tts = TextToSpeech(
+        aws_access_key=os.getenv('aws_access_key'),
+        aws_secret_key=os.getenv('aws_secret_key'),
+        aws_region_name=os.getenv('AWS_DEFAULT_REGION')
+    )
+
+    try:
+        # Генерация аудио через TextToSpeech
+        output_file = tts.synthesize_speech(text_to_speech)
+
+        # Чтение сгенерированного аудиофайла в память
+        with open(output_file, "rb") as f:
+            file_data = f.read()
+
+        # Сохраняем аудио во временный файл
+        temp_audio_file_path = "temp_speech.mp3"
+        with open(temp_audio_file_path, "wb") as temp_file:
+            temp_file.write(file_data)
+
+        # Создаем FSInputFile с временным файлом
+        audio = FSInputFile(temp_audio_file_path)
+        # Отправка файла аудио пользователю
+        await message.reply_audio(audio, caption="Вот ваша озвучка текста.")
+
+        # Удаляем временный файл после отправки
+        os.remove(temp_audio_file_path)
+
+    except Exception as e:
+        await message.reply(f"Произошла ошибка: {str(e)}")
+
+    # Очищаем состояние после выполнения
+    await state.clear()
+

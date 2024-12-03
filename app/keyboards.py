@@ -7,7 +7,8 @@ commands_keyboard = ReplyKeyboardMarkup(
         [KeyboardButton(text='links'), KeyboardButton(text='help')],
         [KeyboardButton(text='language_interface')],
         [KeyboardButton(text='Voice_in_text')],
-        [KeyboardButton(text='Translate')]
+        [KeyboardButton(text='Translate')],
+        [KeyboardButton(text='Text_to_Speech')],
     ],
     resize_keyboard=True,  # Уменьшает размер клавиатуры под размер кнопок
     input_field_placeholder='Выберите пункт меню.'  # Место для ввода текста
