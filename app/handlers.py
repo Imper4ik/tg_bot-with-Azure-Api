@@ -99,7 +99,7 @@ async def handle_text_commands(message: Message, state: FSMContext):
         elif message.text == 'help':
             await get_help(message)
         elif message.text == 'language_interface':
-           await language_interface(message)
+            await language_interface(message)
         elif message.text == 'Voice_in_text':
             await request_voice_message(message)
         elif message.text == 'Translate':
@@ -219,12 +219,19 @@ async def request_text_for_speech(message: types.Message, state: FSMContext):
     # Запрашиваем у пользователя текст для озвучивания
     await message.reply("Введите текст, который вы хотите озвучить. (en)")
 
+    # Логируем текущие состояния для отладки
+    current_state = await state.get_state()
+    print(f"Текущее состояние: {current_state}")
+
     # Переходим в состояние ожидания текста для озвучки
     await state.set_state(SpeechStates.waiting_for_speech_text)
 
 
 @router.message(SpeechStates.waiting_for_speech_text)
 async def handle_text_to_speech(message: types.Message, state: FSMContext):
+    # Логируем текущее состояние
+    current_state = await state.get_state()
+    print(f"Текущее состояние перед обработкой текста: {current_state}")
 
     text_to_speech = message.text
 
