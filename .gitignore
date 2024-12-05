@@ -2,3 +2,5 @@
 text
 translated_text.txt
 Voices
+__pycache__/
+*.pyc
