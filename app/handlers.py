@@ -1,3 +1,4 @@
+import logging
 import time
 
 from aiogram import F, Router, types
@@ -99,7 +100,7 @@ async def handle_text_commands(message: Message, state: FSMContext):
         elif message.text == 'help':
             await get_help(message)
         elif message.text == 'language_interface':
-           await language_interface(message)
+            await language_interface(message)
         elif message.text == 'Voice_in_text':
             await request_voice_message(message)
         elif message.text == 'Translate':
@@ -150,6 +151,7 @@ async def change_language(call: CallbackQuery, state: FSMContext):
     await call.message.edit_reply_markup()
 
 
+# Обработчик команды /Voice_in_text
 @router.message(Command('Voice_in_text'))
 async def request_voice_message(message: Message):
     await message.reply('Начните записывать голосовое сообщение (Только на Eng)')
@@ -164,11 +166,6 @@ async def handle_voice_message(message: Message):
     await message.bot.download_file(file_path.file_path, voice_file)
     text = speech_to_text(voice_file)
     await message.reply(text)
-
-    with open('text', "w+") as voice_file:
-        voice_file.write(text)
-
-    os.remove(voice_file)
 
 
 @router.message(Command('Translate'))
@@ -273,4 +270,3 @@ async def handle_text_to_speech(message: types.Message, state: FSMContext):
 
     # Очищаем состояние после выполнения
     await state.clear()
-
