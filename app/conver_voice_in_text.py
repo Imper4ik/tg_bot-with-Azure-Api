@@ -91,14 +91,22 @@ def speech_to_text(voice_file):
             time.sleep(1)  # Увеличенная задержка перед удалением
             remove_file_with_retry(ogg_file)
 
+
 # Функция для удаления файла с повторной попыткой
-def remove_file_with_retry(file_path, retries=5):
-    for _ in range(retries):
+def remove_file_with_retry(file_path, retries=5, delay=2):
+    attempt = 0
+    while attempt < retries:
         try:
             os.remove(file_path)
-            logging.info("Файл %s успешно удален.", file_path)
-            return
-        except Exception as e:
-            logging.error("Ошибка при удалении файла %s: %s", file_path, str(e))
-            time.sleep(2)  # Ждем перед повторной попыткой
-    logging.error("Не удалось удалить файл %s после %d попыток.", file_path, retries)
+            print(f"Файл {file_path} успешно удален.")
+            return True
+        except OSError as e:
+            if e.errno == 32:  # WinError 32 - файл занят
+                print(f"Файл {file_path} занят. Попытка {attempt + 1} из {retries}.")
+                time.sleep(delay)
+                attempt += 1
+            else:
+                print(f"Не удалось удалить файл {file_path}: {e}")
+                return False
+    print(f"Не удалось удалить файл {file_path} после {retries} попыток.")
+    return False
