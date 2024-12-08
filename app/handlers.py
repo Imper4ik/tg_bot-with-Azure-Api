@@ -15,7 +15,6 @@ from app.translate_text import translate_text, detect_language
 import app.keyboards as kb
 import os
 
-from app.translated_text_into_speech import process_audio_to_speech
 
 # Загрузить переменные окружения из файла .env
 load_dotenv()
@@ -310,5 +309,3 @@ async def handle_audio_to_speech(message: types.Message, state: FSMContext):
         await message.answer(f"Переведенный текст: {translated_text}")
     else:
         await message.answer("Пожалуйста, отправьте аудиофайл для обработки.")
-
-
