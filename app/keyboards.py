@@ -5,7 +5,7 @@ commands_keyboard = ReplyKeyboardMarkup(
     keyboard=[
         [KeyboardButton(text='full commands'), KeyboardButton(text='show your information')],
         [KeyboardButton(text='links'), KeyboardButton(text='help')],
-        [KeyboardButton(text='language_interface')],
+        [KeyboardButton(text='language_interface'), KeyboardButton(text='handle_audio_to_speech')],
         [KeyboardButton(text='Voice_in_text')],
         [KeyboardButton(text='Translate')],
         [KeyboardButton(text='Text_to_Speech')],
