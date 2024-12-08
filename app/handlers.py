@@ -10,11 +10,12 @@ from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import StatesGroup, State
 
 from app.text_into_speech import TextToSpeech
-from app.translate_text import translate_text
-
+from app.translate_text import translate_text, detect_language
 
 import app.keyboards as kb
 import os
+
+from app.translated_text_into_speech import process_audio_to_speech
 
 # Загрузить переменные окружения из файла .env
 load_dotenv()
@@ -70,7 +71,8 @@ async def cmd_start(message: types.Message):
                          '5 - language_interface\n'
                          '6 - Voice_in_text \n'
                          '7 - Translate \n'
-                         '8 - Text_to_Speech', reply_markup=kb.commands_keyboard)
+                         '8 - Text_to_Speech \n'
+                         '9 - handle_audio_to_speech', reply_markup=kb.commands_keyboard)
 
 
 @router.message(F.text)
@@ -96,20 +98,24 @@ async def handle_text_commands(message: Message, state: FSMContext):
     elif current_state == SpeechStates.waiting_for_speech_text:
         await handle_text_to_speech(message, state)
     else:
-        if message.text == 'start':
+        if message.text == 'full commands':
             await cmd_start(message)
-        elif message.text == 'show':
+        elif message.text == 'show your information':
             await show(message)
         elif message.text == 'links':
             await url(message)
         elif message.text == 'help':
             await get_help(message)
+        elif message.text == 'language_interface':
+            await language_interface(message)
         elif message.text == 'Voice_in_text':
             await request_voice_message(message)
         elif message.text == 'Translate':
             await start_translate(message, state)
         elif message.text == 'Text_to_Speech':
             await request_language_for_speech(message, state)
+        elif message.text == 'handle_audio_to_speech':
+            await handle_audio_to_speech(message, state)
         else:
             await message.reply("Неизвестная команда. Пожалуйста, выберите пункт из меню.")
 
@@ -230,7 +236,7 @@ async def handle_language_selection(message: types.Message, state: FSMContext):
         return
 
     await state.update_data(language=selected_language)
-    await message.reply("Теперь выберите голос: 'male' или 'female' ('male' недоступен для 'pl'.")
+    await message.reply("Теперь выберите голос: 'male' или 'female' ('male' недоступен для 'pl').")
     await state.set_state(SpeechStates.waiting_for_gender)
 
 
@@ -276,3 +282,33 @@ async def handle_text_to_speech(message: types.Message, state: FSMContext):
         await message.reply(f"Произошла ошибка: {str(e)}")
 
     await state.clear()
+
+
+@router.message(SpeechStates.waiting_for_speech_text)
+async def handle_audio_to_speech(message: types.Message, state: FSMContext):
+    # Шаг 1: Распознаем речь из аудиофайла
+    if message.audio:
+        input_audio_path = f"downloads/{message.audio.file_id}.ogg"
+        await message.audio.download(input_audio_path)
+
+        # Вызов функции для конвертации речи в текст
+        recognized_text = await speech_to_text(input_audio_path)
+
+        if "Ошибка" in recognized_text:
+            await message.answer(f"Произошла ошибка при распознавании речи: {recognized_text}")
+            return
+
+        # Шаг 2: Переводим текст
+        target_language = await detect_language(recognized_text)
+        translated_text = await translate_text(recognized_text, target_language)
+
+        if "Ошибка" in translated_text:
+            await message.answer(f"Произошла ошибка при переводе текста: {translated_text}")
+            return
+
+        # Отправляем переведенный текст пользователю
+        await message.answer(f"Переведенный текст: {translated_text}")
+    else:
+        await message.answer("Пожалуйста, отправьте аудиофайл для обработки.")
+
+
