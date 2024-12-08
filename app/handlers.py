@@ -9,6 +9,7 @@ from app.conver_voice_in_text import speech_to_text
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import StatesGroup, State
 
+from app.handle_audio_to_speech import process_audio_to_speech
 from app.text_into_speech import TextToSpeech
 from app.translate_text import translate_text, detect_language
 
@@ -26,7 +27,7 @@ router = Router()
 user_message_times = {}
 
 # Максимальное количество сообщений в минуту
-MAX_MESSAGES_PER_MINUTE = 10
+MAX_MESSAGES_PER_MINUTE = 15
 TIME_FRAME = 60  # 60 секунд
 
 
@@ -55,6 +56,7 @@ class TranslateStates(StatesGroup):
 
 
 class SpeechStates(StatesGroup):
+    waiting_for_audio = State()
     waiting_for_language = State()
     waiting_for_gender = State()
     waiting_for_speech_text = State()
@@ -239,15 +241,24 @@ async def handle_language_selection(message: types.Message, state: FSMContext):
     await state.set_state(SpeechStates.waiting_for_gender)
 
 
-@router.message(SpeechStates.waiting_for_gender)
 async def handle_gender_selection(message: types.Message, state: FSMContext):
     selected_gender = message.text.strip().lower()
     data = await state.get_data()
     selected_language = data.get("language")
 
+    # Проверка на допустимость выбранного пола для языка
+    if selected_language == 'pl' and selected_gender == 'male':
+        await message.reply("Для польского языка доступен только женский голос. Пожалуйста, выберите 'female'.")
+        return
+    elif selected_gender not in ['male', 'female']:
+        await message.reply("Ошибка: Пожалуйста, выберите 'male' или 'female'. Попробуйте снова.")
+        return  # Ожидаем новый ввод от пользователя
+
     # Сохраняем данные языка и пола
     await state.update_data(language=selected_language, gender=selected_gender)
-    await message.reply("Введите текст, который вы хотите озвучить.")
+
+    # Переходим к следующему шагу
+    await message.reply("Теперь введите текст, который вы хотите озвучить.")
     await state.set_state(SpeechStates.waiting_for_speech_text)
 
 
@@ -283,29 +294,94 @@ async def handle_text_to_speech(message: types.Message, state: FSMContext):
     await state.clear()
 
 
-@router.message(SpeechStates.waiting_for_speech_text)
-async def handle_audio_to_speech(message: types.Message, state: FSMContext):
-    # Шаг 1: Распознаем речь из аудиофайла
-    if message.audio:
-        input_audio_path = f"downloads/{message.audio.file_id}.ogg"
-        await message.audio.download(input_audio_path)
+@router.message(Command('handle_audio_to_speech'))
+async def handle_audio_to_speech(message: Message, state: FSMContext):
+    # Шаг 1: Запрос аудио
+    await message.reply("Пожалуйста, отправьте голосовое сообщение для преобразования в текст.")
+    await state.set_state(SpeechStates.waiting_for_audio)
 
-        # Вызов функции для конвертации речи в текст
-        recognized_text = await speech_to_text(input_audio_path)
 
-        if "Ошибка" in recognized_text:
-            await message.answer(f"Произошла ошибка при распознавании речи: {recognized_text}")
-            return
+@router.message(SpeechStates.waiting_for_audio, F.voice)
+async def process_audio(message: Message, state: FSMContext):
+    # Шаг 2: Обработка голосового сообщения
+    voice_file_id = message.voice.file_id
+    file_path = await message.bot.get_file(voice_file_id)
+    voice_file = f"{voice_file_id}.ogg"
+    await message.bot.download_file(file_path.file_path, voice_file)
 
-        # Шаг 2: Переводим текст
-        target_language = await detect_language(recognized_text)
-        translated_text = await translate_text(recognized_text, target_language)
+    # Преобразуем аудио в текст
+    text = speech_to_text(voice_file)
 
-        if "Ошибка" in translated_text:
-            await message.answer(f"Произошла ошибка при переводе текста: {translated_text}")
-            return
+    if not text or text == "Ошибка распознавания речи":
+        await message.reply("Не удалось распознать речь на аудио.")
+        return
 
-        # Отправляем переведенный текст пользователю
-        await message.answer(f"Переведенный текст: {translated_text}")
-    else:
-        await message.answer("Пожалуйста, отправьте аудиофайл для обработки.")
+    await message.reply(f"Распознанный текст: {text}")
+
+    # Шаг 3: Запрос языка для перевода
+    await message.reply(
+        "Пожалуйста, выберите язык, на который вы хотите перевести текст. (например: 'en', 'ru', 'pl').")
+    await state.update_data(text_to_translate=text)
+    await state.set_state(TranslateStates.waiting_for_language)
+
+
+@router.message(TranslateStates.waiting_for_language)
+async def choose_translation_language(message: Message, state: FSMContext):
+    selected_language = message.text.strip().lower()
+
+    # Проверяем, что выбранный язык поддерживается
+    if not selected_language:
+        await message.reply("Пожалуйста, введите допустимый код языка (например: 'en', 'ru', 'pl').")
+        return
+
+    await state.update_data(selected_language=selected_language)
+
+    # Шаг 4: Перевод текста
+    text_to_translate = (await state.get_data()).get('text_to_translate')
+    translation = translate_text(text_to_translate, to_langs=[selected_language])
+
+    if not translation:
+        await message.reply("Ошибка при переводе текста.")
+        return
+
+    translated_text = translation[0]['translations'][0]['text']
+    await message.reply(f"Переведённый текст: {translated_text}")
+
+    # Шаг 5: Запрос на выбор голоса для озвучки
+    await message.reply("Теперь выберите голос для озвучки текста: 'male' или 'female'.")
+    await state.update_data(translated_text=translated_text)
+    await state.set_state(SpeechStates.waiting_for_gender)
+
+
+@router.message(SpeechStates.waiting_for_gender)
+async def handle_gender_for_speech(message: Message, state: FSMContext):
+    selected_gender = message.text.strip().lower()
+    data = await state.get_data()
+    translated_text = data.get("translated_text")
+    selected_language = data.get("selected_language")
+
+    if selected_gender not in ['male', 'female']:
+        await message.reply("Пожалуйста, выберите 'male' или 'female'.")
+        return
+
+    # Шаг 6: Генерация озвучки
+    tts = TextToSpeech(
+        aws_access_key=os.getenv('aws_access_key'),
+        aws_secret_key=os.getenv('aws_secret_key'),
+        aws_region_name=os.getenv('AWS_DEFAULT_REGION')
+    )
+
+    try:
+        # Генерация аудиофайла для переведённого текста
+        output_file = tts.synthesize_speech(text=translated_text, language=selected_language, gender=selected_gender)
+
+        # Отправляем аудио в качестве ответа
+        await message.reply_audio(FSInputFile(output_file), caption="Вот ваша озвучка переведённого текста.")
+
+        # Удаляем временный файл после отправки
+        os.remove(output_file)
+
+    except Exception as e:
+        await message.reply(f"Произошла ошибка при озвучивании текста: {str(e)}")
+
+    await state.clear()
