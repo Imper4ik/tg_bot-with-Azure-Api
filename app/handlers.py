@@ -10,11 +10,12 @@ from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import StatesGroup, State
 
 from app.text_into_speech import TextToSpeech
-from app.translate_text import translate_text
-
+from app.translate_text import translate_text, detect_language
 
 import app.keyboards as kb
 import os
+
+from app.translated_text_into_speech import process_audio_to_speech
 
 # Загрузить переменные окружения из файла .env
 load_dotenv()
@@ -55,6 +56,8 @@ class TranslateStates(StatesGroup):
 
 
 class SpeechStates(StatesGroup):
+    waiting_for_language = State()
+    waiting_for_gender = State()
     waiting_for_speech_text = State()
 
 
@@ -68,7 +71,8 @@ async def cmd_start(message: types.Message):
                          '5 - language_interface\n'
                          '6 - Voice_in_text \n'
                          '7 - Translate \n'
-                         '8 - Text_to_Speech', reply_markup=kb.commands_keyboard)
+                         '8 - Text_to_Speech \n'
+                         '9 - handle_audio_to_speech', reply_markup=kb.commands_keyboard)
 
 
 @router.message(F.text)
@@ -87,7 +91,11 @@ async def handle_text_commands(message: Message, state: FSMContext):
         await choose_language(message, state)
     elif current_state == TranslateStates.waiting_for_text.state:
         await handle_translate_text(message, state)
-    elif current_state == SpeechStates.waiting_for_speech_text.state:
+    elif current_state == SpeechStates.waiting_for_language:
+        await handle_language_selection(message, state)
+    elif current_state == SpeechStates.waiting_for_gender:
+        await handle_gender_selection(message, state)
+    elif current_state == SpeechStates.waiting_for_speech_text:
         await handle_text_to_speech(message, state)
     else:
         if message.text == 'full commands':
@@ -105,7 +113,9 @@ async def handle_text_commands(message: Message, state: FSMContext):
         elif message.text == 'Translate':
             await start_translate(message, state)
         elif message.text == 'Text_to_Speech':
-            await request_text_for_speech(message, state)
+            await request_language_for_speech(message, state)
+        elif message.text == 'handle_audio_to_speech':
+            await handle_audio_to_speech(message, state)
         else:
             await message.reply("Неизвестная команда. Пожалуйста, выберите пункт из меню.")
 
@@ -150,6 +160,7 @@ async def change_language(call: CallbackQuery, state: FSMContext):
     await call.message.edit_reply_markup()
 
 
+# Обработчик команды /Voice_in_text
 @router.message(Command('Voice_in_text'))
 async def request_voice_message(message: Message):
     await message.reply('Начните записывать голосовое сообщение (Только на Eng)')
@@ -164,11 +175,6 @@ async def handle_voice_message(message: Message):
     await message.bot.download_file(file_path.file_path, voice_file)
     text = speech_to_text(voice_file)
     await message.reply(text)
-
-    with open('text', "w+") as voice_file:
-        voice_file.write(text)
-
-    os.remove(voice_file)
 
 
 @router.message(Command('Translate'))
@@ -214,33 +220,49 @@ async def handle_translate_text(message: types.Message, state: FSMContext):
     await state.clear()
 
 
+# Озвучка текста
 @router.message(Command('Text_to_Speech'))
-async def request_text_for_speech(message: types.Message, state: FSMContext):
-    # Запрашиваем у пользователя текст для озвучивания
-    await message.reply("Введите текст, который вы хотите озвучить. (en)")
+async def request_language_for_speech(message: Message, state: FSMContext):
+    # Запрашиваем у пользователя язык для озвучивания
+    await message.reply("Выберите язык озвучки ('en', 'ru', 'pl', 'de').")
+    await state.set_state(SpeechStates.waiting_for_language)
 
-    # Логируем текущие состояния для отладки
-    current_state = await state.get_state()
-    print(f"Текущее состояние: {current_state}")
 
-    # Переходим в состояние ожидания текста для озвучки
+@router.message(SpeechStates.waiting_for_language)
+async def handle_language_selection(message: types.Message, state: FSMContext):
+    selected_language = message.text.strip().lower()
+    if selected_language not in TextToSpeech.VOICE_MAP:
+        await message.reply("Неподдерживаемый язык. Пожалуйста, выберите из 'en', 'ru', 'pl', 'de'.")
+        return
+
+    await state.update_data(language=selected_language)
+    await message.reply("Теперь выберите голос: 'male' или 'female' ('male' недоступен для 'pl').")
+    await state.set_state(SpeechStates.waiting_for_gender)
+
+
+@router.message(SpeechStates.waiting_for_gender)
+async def handle_gender_selection(message: types.Message, state: FSMContext):
+    selected_gender = message.text.strip().lower()
+    data = await state.get_data()
+    selected_language = data.get("language")
+
+    # Сохраняем данные языка и пола
+    await state.update_data(language=selected_language, gender=selected_gender)
+    await message.reply("Введите текст, который вы хотите озвучить.")
     await state.set_state(SpeechStates.waiting_for_speech_text)
 
 
 @router.message(SpeechStates.waiting_for_speech_text)
 async def handle_text_to_speech(message: types.Message, state: FSMContext):
-    # Логируем текущее состояние
-    current_state = await state.get_state()
-    print(f"Текущее состояние перед обработкой текста: {current_state}")
-
+    data = await state.get_data()
+    language = data.get("language")
+    gender = data.get("gender")
     text_to_speech = message.text
 
-    # Убедимся, что текст не превышает лимит
-    if len(text_to_speech) > 3000:  # AWS Polly поддерживает до 3000 символов за раз
+    if len(text_to_speech) > 3000:
         await message.reply("Текст слишком длинный. Пожалуйста, введите текст до 3000 символов.")
         return
 
-    # Инициализация TextToSpeech с правильными ключами
     tts = TextToSpeech(
         aws_access_key=os.getenv('aws_access_key'),
         aws_secret_key=os.getenv('aws_secret_key'),
@@ -248,29 +270,45 @@ async def handle_text_to_speech(message: types.Message, state: FSMContext):
     )
 
     try:
-        # Генерация аудио через TextToSpeech
-        output_file = tts.synthesize_speech(text_to_speech)
+        # Генерация аудиофайла
+        output_file = tts.synthesize_speech(text=text_to_speech, language=language, gender=gender)
 
-        # Чтение сгенерированного аудиофайла в память
-        with open(output_file, "rb") as f:
-            file_data = f.read()
-
-        # Сохраняем аудио во временный файл
-        temp_audio_file_path = "temp_speech.mp3"
-        with open(temp_audio_file_path, "wb") as temp_file:
-            temp_file.write(file_data)
-
-        # Создаем FSInputFile с временным файлом
-        audio = FSInputFile(temp_audio_file_path)
-        # Отправка файла аудио пользователю
-        await message.reply_audio(audio, caption="Вот ваша озвучка текста.")
+        # Отправляем аудио в качестве ответа
+        await message.reply_audio(FSInputFile(output_file), caption="Вот ваша озвучка текста.")
 
         # Удаляем временный файл после отправки
-        os.remove(temp_audio_file_path)
-
+        os.remove(output_file)
     except Exception as e:
         await message.reply(f"Произошла ошибка: {str(e)}")
 
-    # Очищаем состояние после выполнения
     await state.clear()
+
+
+@router.message(SpeechStates.waiting_for_speech_text)
+async def handle_audio_to_speech(message: types.Message, state: FSMContext):
+    # Шаг 1: Распознаем речь из аудиофайла
+    if message.audio:
+        input_audio_path = f"downloads/{message.audio.file_id}.ogg"
+        await message.audio.download(input_audio_path)
+
+        # Вызов функции для конвертации речи в текст
+        recognized_text = await speech_to_text(input_audio_path)
+
+        if "Ошибка" in recognized_text:
+            await message.answer(f"Произошла ошибка при распознавании речи: {recognized_text}")
+            return
+
+        # Шаг 2: Переводим текст
+        target_language = await detect_language(recognized_text)
+        translated_text = await translate_text(recognized_text, target_language)
+
+        if "Ошибка" in translated_text:
+            await message.answer(f"Произошла ошибка при переводе текста: {translated_text}")
+            return
+
+        # Отправляем переведенный текст пользователю
+        await message.answer(f"Переведенный текст: {translated_text}")
+    else:
+        await message.answer("Пожалуйста, отправьте аудиофайл для обработки.")
+
 
