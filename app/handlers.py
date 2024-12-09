@@ -81,11 +81,10 @@ async def cmd_start(message: types.Message):
                          '2 - show your information \n'
                          '3 - links \n'
                          '4 - help \n'
-                         '5 - language_interface\n'
-                         '6 - Voice_in_text \n'
-                         '7 - Translate \n'
-                         '8 - Text_to_Speech \n'
-                         '9 - handle_audio_to_speech', reply_markup=kb.commands_keyboard)
+                         '5 - Voice_in_text \n'
+                         '6 - Translate \n'
+                         '7 - Text_to_Speech \n'
+                         '8 - handle_audio_to_speech', reply_markup=kb.commands_keyboard)
 
 
 @router.message(F.text)
@@ -125,8 +124,6 @@ async def handle_text_commands(message: Message, state: FSMContext):
             await url(message)
         elif message.text == 'help':
             await get_help(message)
-        elif message.text == 'language_interface':
-            await language_interface(message)
         elif message.text == 'Voice_in_text':
             await request_and_handle_voice_message(message)
         elif message.text == 'Translate':
@@ -157,26 +154,6 @@ async def get_help(message: types.Message):
 @router.message(Command('language_interface'))
 async def language_interface(message: types.Message):
     await message.reply("Please choose your language:", reply_markup=kb.language_interface)
-
-
-@router.callback_query()
-async def change_language(call: CallbackQuery, state: FSMContext):
-    user_id = call.from_user.id
-    language_code = call.data.split('_')[1]  # Получаем код языка, например 'en' для английского
-
-    # Сохраняем выбранный язык в FSM
-    await state.update_data(language=language_code)
-
-    # Отвечаем пользователю
-    if language_code == 'en':
-        await call.message.answer("Language set to English. Use /start to see changes.")
-    elif language_code == 'ru':
-        await call.message.answer("Язык интерфейса изменен на русский. Используйте /start, чтобы увидеть изменения.")
-    elif language_code == 'pl':
-        await call.message.answer("Język interfejsu zmieniony na polski. Użyj /start, aby zobaczyć zmiany.")
-
-    # Убираем клавиатуру после выбора
-    await call.message.edit_reply_markup()
 
 
 # Обработчик команды /Voice_in_text
