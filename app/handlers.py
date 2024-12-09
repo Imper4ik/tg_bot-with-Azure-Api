@@ -37,7 +37,7 @@ router = Router()
 user_message_times = {}
 
 # Максимальное количество сообщений в минуту
-MAX_MESSAGES_PER_MINUTE = 10
+MAX_MESSAGES_PER_MINUTE = 30
 TIME_FRAME = 60  # 60 секунд
 
 
