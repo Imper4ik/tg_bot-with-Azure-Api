@@ -1,22 +1,17 @@
 import time
-
-from aiogram import F, Router, types
-from aiogram.filters import CommandStart, Command
-from aiogram.types import Message, CallbackQuery, FSInputFile
-from dotenv import load_dotenv
-
-from app.conver_voice_in_text import speech_to_text
-from aiogram.fsm.context import FSMContext
-from aiogram.fsm.state import StatesGroup, State
-from aiogram.filters import StateFilter
-
-
-from app.text_into_speech import TextToSpeech
-from app.translate_text import translate_text, detect_language
-
 import app.keyboards as kb
 import os
 import logging
+
+from aiogram import F, Router, types
+from aiogram.filters import CommandStart, Command
+from aiogram.types import Message, FSInputFile
+from dotenv import load_dotenv
+from app.conver_voice_in_text import speech_to_text
+from aiogram.fsm.context import FSMContext
+from aiogram.fsm.state import StatesGroup, State
+from app.text_into_speech import TextToSpeech
+from app.translate_text import translate_text, detect_language
 
 
 logging.basicConfig(
