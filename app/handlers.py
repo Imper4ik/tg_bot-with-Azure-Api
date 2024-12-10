@@ -11,7 +11,7 @@ from app.conver_voice_in_text import speech_to_text
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import StatesGroup, State
 from app.text_into_speech import TextToSpeech
-from app.translate_text import translate_text, detect_language
+from app.translate_text import translate_text
 
 
 logging.basicConfig(
@@ -36,25 +36,6 @@ MAX_MESSAGES_PER_MINUTE = 30
 TIME_FRAME = 60  # 60 секунд
 
 
-# Функция для проверки, не превышен ли лимит сообщений
-def is_user_spamming(user_id: int) -> bool:
-    current_time = time.time()
-
-    if user_id not in user_message_times:
-        user_message_times[user_id] = []
-
-    # Очищаем старые записи сообщений (более 1 минуты назад)
-    user_message_times[user_id] = [timestamp for timestamp in user_message_times[user_id] if current_time - timestamp < TIME_FRAME]
-
-    # Проверяем, не превышено ли количество сообщений
-    if len(user_message_times[user_id]) >= MAX_MESSAGES_PER_MINUTE:
-        return True
-
-    # Добавляем временную метку нового сообщения
-    user_message_times[user_id].append(current_time)
-    return False
-
-
 class TranslateStates(StatesGroup):
     waiting_for_language = State()
     waiting_for_language_to_speech = State()
@@ -69,17 +50,37 @@ class SpeechStates(StatesGroup):
     waiting_for_gender_to_speech = State()
 
 
+# Функция для проверки, не превышен ли лимит сообщений
+def is_user_spamming(user_id: int) -> bool:
+    current_time = time.time()
+
+    if user_id not in user_message_times:
+        user_message_times[user_id] = []
+
+    # Очищаем старые записи сообщений (более 1 минуты назад)
+    user_message_times[user_id] = [
+        timestamp for timestamp in user_message_times[user_id] if current_time - timestamp < TIME_FRAME
+    ]
+
+    # Проверяем, не превышено ли количество сообщений
+    if len(user_message_times[user_id]) >= MAX_MESSAGES_PER_MINUTE:
+        return True
+
+    # Добавляем временную метку нового сообщения
+    user_message_times[user_id].append(current_time)
+    return False
+
+
 @router.message(CommandStart())
 async def cmd_start(message: types.Message):
     await message.answer('full commands: \n '
                          '1 - full commands \n'
                          '2 - show your information \n'
-                         '3 - links \n'
-                         '4 - help \n'
-                         '5 - Voice_in_text \n'
-                         '6 - Translate \n'
-                         '7 - Text_to_Speech \n'
-                         '8 - handle_audio_to_speech', reply_markup=kb.commands_keyboard)
+                         '3 - help \n'
+                         '4 - Voice_in_text \n'
+                         '5 - Translate \n'
+                         '6 - Text_to_Speech \n'
+                         '7 - handle_audio_to_speech', reply_markup=kb.commands_keyboard)
 
 
 @router.message(F.text)
@@ -88,7 +89,7 @@ async def handle_text_commands(message: Message, state: FSMContext):
 
     # Проверяем, не превышен ли лимит сообщений
     if is_user_spamming(user_id):
-        await message.reply("Вы отправляете слишком много сообщений. Пожалуйста, подождите немного.")
+        await message.reply("You are sending too many messages. Please wait a bit.")
         return
 
     # Обрабатываем команды или состояния
@@ -115,8 +116,6 @@ async def handle_text_commands(message: Message, state: FSMContext):
             await cmd_start(message)
         elif message.text == 'show your information':
             await show(message)
-        elif message.text == 'links':
-            await url(message)
         elif message.text == 'help':
             await get_help(message)
         elif message.text == 'Voice_in_text':
@@ -128,33 +127,23 @@ async def handle_text_commands(message: Message, state: FSMContext):
         elif message.text == 'handle_audio_to_speech':
             await handle_audio_to_speech(message, state)
         else:
-            await message.reply("Неизвестная команда. Пожалуйста, выберите пункт из меню.")
+            await message.reply("Unknown command. Please select an option from the menu.")
 
 
 @router.message(Command('show'))
 async def show(message: Message):
-    await message.reply(f'Привет, твой id: {message.from_user.id}\nИмя: {message.from_user.first_name}')
-
-
-@router.message(Command('links'))
-async def url(message: Message):
-    await message.reply('Твои добавленные ссылки:', reply_markup=kb.urls)
+    await message.reply(f'Hello, your ID: {message.from_user.id}\nName: {message.from_user.first_name}')
 
 
 @router.message(Command('help'))
 async def get_help(message: types.Message):
-    await message.answer('Ссылка на телеграмм разработчика: @Mando_Grogu')
-
-
-@router.message(Command('language_interface'))
-async def language_interface(message: types.Message):
-    await message.reply("Please choose your language:", reply_markup=kb.language_interface)
+    await message.answer("Link to the developer's Telegram: @Mando_Grogu")
 
 
 # Обработчик команды /Voice_in_text
 @router.message(Command('Voice_in_text'))
 async def request_and_handle_voice_message(message: Message):
-    await message.reply('Начните записывать голосовое сообщение (Только на Eng)')
+    await message.reply('Start recording a voice message.(only Eng)')
 
     # Ожидание голосового сообщения
     @router.message(lambda m: m.voice)
@@ -172,7 +161,7 @@ async def request_and_handle_voice_message(message: Message):
 
 @router.message(Command('Translate'))
 async def start_translate(message: types.Message, state: FSMContext):
-    await message.reply("Пожалуйста, выберите язык на который вы хотите перевести (например: 'en', 'pl', 'de').")
+    await message.reply("Please select the language you want to translate to (e.g., 'en', 'pl', 'de').")
     await state.set_state(TranslateStates.waiting_for_language)
 
 
@@ -183,10 +172,10 @@ async def choose_language(message: types.Message, state: FSMContext):
     # Проверка правильности введенного языка (можете добавить дополнительные проверки)
     if selected_language:
         await state.update_data(selected_language=selected_language)
-        await message.reply("Теперь введите текст для перевода.")
+        await message.reply("Now, please enter the text to translate.")
         await state.set_state(TranslateStates.waiting_for_text)
     else:
-        await message.reply("Некорректный язык. Пожалуйста, введите допустимый код языка (например: 'en', 'pl', 'de').")
+        await message.reply("Invalid language. Please enter a valid language code (e.g., 'en', 'pl', 'de').")
 
 
 # Обработка текста и его перевод
@@ -204,11 +193,11 @@ async def handle_translate_text(message: types.Message, state: FSMContext):
                 translations.append(f"{translation['to']}: {translation['text']}")
 
         if not translations:
-            await message.reply("Перевод не найден.")
+            await message.reply("Translation not found.")
         else:
             await message.reply("\n".join(translations))
     else:
-        await message.reply("Ошибка при переводе текста.")
+        await message.reply("Error while translating the text.")
 
     await state.clear()
 
@@ -217,7 +206,7 @@ async def handle_translate_text(message: types.Message, state: FSMContext):
 @router.message(Command('Text_to_Speech'))
 async def request_language_for_speech(message: Message, state: FSMContext):
     # Запрашиваем у пользователя язык для озвучивания
-    await message.reply("Выберите язык озвучки ('en', 'ru', 'pl', 'de').")
+    await message.reply("Select the voiceover language ('en', 'ru', 'pl', 'de').")
     await state.set_state(SpeechStates.waiting_for_language)
 
 
@@ -225,11 +214,11 @@ async def request_language_for_speech(message: Message, state: FSMContext):
 async def handle_language_selection(message: types.Message, state: FSMContext):
     selected_language = message.text.strip().lower()
     if selected_language not in TextToSpeech.VOICE_MAP:
-        await message.reply("Неподдерживаемый язык. Пожалуйста, выберите из 'en', 'ru', 'pl', 'de'.")
+        await message.reply("Unsupported language. Please choose from 'en', 'ru', 'pl', 'de'.")
         return
 
     await state.update_data(language=selected_language)
-    await message.reply("Теперь выберите голос: 'male' или 'female' ('male' недоступен для 'pl').")
+    await message.reply("Now, choose a voice: 'male' or 'female' ('male' is unavailable for 'pl').")
     await state.set_state(SpeechStates.waiting_for_gender)
 
 
@@ -241,17 +230,17 @@ async def handle_gender_selection(message: types.Message, state: FSMContext):
 
     # Проверка на допустимость выбранного пола для языка
     if selected_language == 'pl' and selected_gender == 'male':
-        await message.reply("Для польского языка доступен только женский голос. Пожалуйста, выберите 'female'.")
+        await message.reply("Only the female voice is available for Polish. Please select 'female'.")
         return
     elif selected_gender not in ['male', 'female']:
-        await message.reply("Ошибка: Пожалуйста, выберите 'male' или 'female'. Попробуйте снова.")
+        await message.reply("Error: Please choose 'male' or 'female'. Try again.")
         return  # Ожидаем новый ввод от пользователя
 
     # Сохраняем данные языка и пола
     await state.update_data(language=selected_language, gender=selected_gender)
 
     # Переходим к следующему шагу
-    await message.reply("Теперь введите текст, который вы хотите озвучить.")
+    await message.reply("Now, please enter the text you want to convert to speech.\n")
     await state.set_state(SpeechStates.waiting_for_speech_text)
 
 
@@ -263,7 +252,7 @@ async def handle_text_to_speech(message: types.Message, state: FSMContext):
     text_to_speech = message.text
 
     if len(text_to_speech) > 3000:
-        await message.reply("Текст слишком длинный. Пожалуйста, введите текст до 3000 символов.")
+        await message.reply("The text is too long. Please enter text up to 3000 characters.")
         return
 
     tts = TextToSpeech(
@@ -277,106 +266,107 @@ async def handle_text_to_speech(message: types.Message, state: FSMContext):
         output_file = tts.synthesize_speech(text=text_to_speech, language=language, gender=gender)
 
         # Отправляем аудио в качестве ответа
-        await message.reply_audio(FSInputFile(output_file), caption="Вот ваша озвучка текста.")
+        await message.reply_audio(FSInputFile(output_file), caption="Here is your text-to-speech.")
 
         # Удаляем временный файл после отправки
         os.remove(output_file)
     except Exception as e:
-        await message.reply(f"Произошла ошибка: {str(e)}")
+        await message.reply(f"An error occurred: {str(e)}.")
 
     await state.clear()
 
 
 @router.message(Command('handle_audio_to_speech'))
 async def handle_audio_to_speech(message: Message, state: FSMContext):
-    logging.info(f"Получена команда /handle_audio_to_speech от пользователя {message.from_user.id}")
-    await message.reply("Пожалуйста, запишите голосовое сообщение (Eng).")
+    logging.info(f"The command /handle_audio_to_speech was received from the user. {message.from_user.id}")
+    await message.reply("Please record a voice message (Eng).")
     await state.set_state(SpeechStates.waiting_for_audio)
-    logging.info("Установлено состояние: waiting_for_audio")
+    logging.info("The status is set to: waiting_for_audio.")
 
 
 @router.message(SpeechStates.waiting_for_audio)
 async def process_audio(message: Message, state: FSMContext):
     try:
-        logging.info(f"Получено голосовое сообщение от пользователя {message.from_user.id}")
+        logging.info(f"A voice message has been received from the user. {message.from_user.id}")
         voice_file_id = message.voice.file_id
         logging.debug(f"Voice file ID: {voice_file_id}")
 
         file_path = await message.bot.get_file(voice_file_id)
-        logging.info(f"Получен путь к файлу: {file_path.file_path}")
+        logging.info(f"The file path has been received: {file_path.file_path}")
 
         voice_file = f"{voice_file_id}.ogg"
         await message.bot.download_file(file_path.file_path, voice_file)
-        logging.info(f"Файл сохранён как: {voice_file}")
+        logging.info(f"The file has been saved as: {voice_file}")
 
         # Преобразование голоса в текст
         text = speech_to_text(voice_file)
-        logging.info(f"Распознанный текст: {text}")
+        logging.info(f"Recognized text: {text}")
 
         await state.update_data(original_text=text)
         await message.reply(
-            f"Распознанный текст: {text}\nТеперь выберите язык для перевода (например: 'en', 'pl', 'de').")
+            f"Recognized text: {text}\n\nNow, please select the language for translation (e.g., 'en', 'pl', 'de').")
         await state.set_state(TranslateStates.waiting_for_language_to_speech)
-        logging.info("Установлено состояние: waiting_for_language")
+        logging.info("The status is set to: waiting_for_language.")
     except Exception as e:
-        logging.error(f"Ошибка при обработке голосового сообщения: {str(e)}")
-        await message.reply(f"Произошла ошибка при обработке голосового сообщения: {str(e)}")
+        logging.error(f"Error while processing the voice message: {str(e)}")
+        await message.reply(f"An error occurred while processing the voice message: {str(e)}")
         await state.clear()
 
 
 @router.message(TranslateStates.waiting_for_language_to_speech)
 async def choose_language_for_audio(message: Message, state: FSMContext):
     selected_language = message.text.strip().lower()
-    logging.info(f"Выбран язык: {selected_language}")
+    logging.info(f"Selected language: {selected_language}")
 
     if selected_language not in ['en', 'pl', 'de', 'ru']:
         await message.reply(
-            "Некорректный язык. Пожалуйста, выберите допустимый код языка (например: 'en', 'pl', 'de').")
-        logging.warning(f"Некорректный выбор языка: {selected_language}")
+            "Invalid language. Please select a valid language code (e.g., 'en', 'pl', 'de').")
+        logging.warning(f"Invalid language selection: {selected_language}")
         return
 
     data = await state.get_data()
     original_text = data.get('original_text')
-    logging.debug(f"Оригинальный текст для перевода: {original_text}")
+    logging.debug(f"Original text for translation: {original_text}")
 
     try:
         result = translate_text(original_text, to_langs=[selected_language])
         translated_text = result[0]['translations'][0]['text'] if 'translations' in result[0] else None
-        logging.info(f"Переведённый текст: {translated_text}")
+        logging.info(f"Translated text: {translated_text}")
 
         if translated_text:
             await state.update_data(translated_text=translated_text, selected_language=selected_language)
             await message.reply(
-                f"Переведённый текст: {translated_text}\nТеперь выберите голос: 'male' или 'female' ('male' недоступен для 'pl').")
+                f"Translated text: {translated_text}\n"
+                f"Now, please select a voice: 'male' or 'female' ('male' is unavailable for 'pl').")
             await state.set_state(SpeechStates.waiting_for_gender_to_speech)
-            logging.info("Установлено состояние: waiting_for_gender")
+            logging.info("The status is set to: waiting_for_gender.")
         else:
-            logging.error("Ошибка: перевод текста вернул пустой результат.")
-            await message.reply("Ошибка при переводе текста.")
+            logging.error("Error: the translation returned an empty result.")
+            await message.reply("Error while translating the text.")
             await state.clear()
     except Exception as e:
-        logging.error(f"Ошибка при переводе текста: {str(e)}")
-        await message.reply("Ошибка при переводе текста.")
+        logging.error(f"Error while translating the text: {str(e)}.")
+        await message.reply("Error while translating the text.")
         await state.clear()
 
 
 @router.message(SpeechStates.waiting_for_gender_to_speech)
 async def choose_voice_and_speak(message: Message, state: FSMContext):
     selected_gender = message.text.strip().lower()
-    logging.info(f"Выбран голос: {selected_gender}")
+    logging.info(f"Selected voice: {selected_gender}")
 
     data = await state.get_data()
     selected_language = data.get('selected_language')
     translated_text = data.get('translated_text')
-    logging.debug(f"Язык: {selected_language}, Текст для озвучки: {translated_text}")
+    logging.debug(f"Language: {selected_language}, Text to be voiced: {translated_text}")
 
     if selected_language == 'pl' and selected_gender == 'male':
-        await message.reply("Для польского языка доступен только женский голос. Пожалуйста, выберите 'female'.")
-        logging.warning("Попытка выбрать мужской голос для польского языка.")
+        await message.reply("For Polish, only the female voice is available. Please select 'female'.")
+        logging.warning("Attempt to select a male voice for Polish language.")
         return
     elif selected_gender not in ['male', 'female']:
-        await message.reply("Ошибка: Пожалуйста, выберите 'male' или 'female'.")
-        logging.warning(f"Некорректный выбор голоса: {selected_gender}")
+        await message.reply("Error: Please select 'male' or 'female'.")
+        logging.warning(f"Invalid voice selection: {selected_gender}")
         return
 
     tts = TextToSpeech(
@@ -387,14 +377,14 @@ async def choose_voice_and_speak(message: Message, state: FSMContext):
 
     try:
         output_file = tts.synthesize_speech(text=translated_text, language=selected_language, gender=selected_gender)
-        logging.info(f"Озвучка текста выполнена, файл сохранён: {output_file}")
+        logging.info(f"Text-to-speech completed, the file has been saved: {output_file}")
 
-        await message.reply_audio(FSInputFile(output_file), caption="Вот ваша озвучка текста.")
+        await message.reply_audio(FSInputFile(output_file), caption="Here is your text-to-speech.")
         os.remove(output_file)  # Удаляем временный файл
-        logging.debug(f"Удалён временный файл озвучки: {output_file}")
+        logging.debug(f"The temporary text-to-speech file has been deleted: {output_file}")
     except Exception as e:
-        logging.error(f"Ошибка при озвучке текста: {str(e)}")
-        await message.reply(f"Произошла ошибка при озвучке текста: {str(e)}")
+        logging.error(f"Error while converting text to speech: {str(e)}")
+        await message.reply(f"An error occurred while converting text to speech: {str(e)}")
 
     await state.clear()
-    logging.info("Состояние очищено.")
+    logging.info("The state has been cleared.")

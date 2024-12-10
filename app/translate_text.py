@@ -17,7 +17,7 @@ azure_translate_endpoint = os.getenv('azure_translate_endpoint')
 def detect_language(text):
     path = '/translate'
     constructed_url = f"{azure_translate_endpoint.rstrip('/')}{path}"  # Исправленный путь
-    print(f"URL для определения языка: {constructed_url}")  # Для отладки
+    print(f"Language definition URL: {constructed_url}")  # Для отладки
 
     params = {'api-version': '3.0', 'to': 'en'}  # Перевод на английский как способ получить язык
     headers = {
@@ -36,12 +36,12 @@ def detect_language(text):
 
         # Определяем язык из ответа API
         detected_language = translations[0]['detectedLanguage']['language']
-        print(f"Определённый язык: {detected_language}")  # Для отладки
+        print(f"Specific language: {detected_language}")  # Для отладки
         return detected_language
     except requests.exceptions.RequestException as e:
-        print(f"Ошибка при определении языка: {e}")
+        print(f"Error when detecting language: {e}")
         if e.response is not None:
-            print(f"Ответ сервера: {e.response.text}")  # Отладочная информация
+            print(f"Server response: {e.response.text}")  # Отладочная информация
         return None
 
 
@@ -50,12 +50,12 @@ def translate_text(text, to_langs):
     from_lang = detect_language(text)
 
     if not from_lang:
-        print("Не удалось определить язык текста.")
+        print("The language of the text could not be determined.")
         return None
 
     path = '/translate'
     constructed_url = f"{azure_translate_endpoint.rstrip('/')}{path}"  # Формируем полный URL
-    print(f"URL для перевода: {constructed_url}")  # Отладка
+    print(f"URL for translation: {constructed_url}")  # Отладка
 
     params = {
         'api-version': '3.0',
@@ -75,10 +75,10 @@ def translate_text(text, to_langs):
     try:
         response = requests.post(constructed_url, params=params, headers=headers, json=body)
         response.raise_for_status()
-        print(f"Ответ API translate_text: {response.json()}")  # Отладка
+        print(f"API translate_text response: {response.json()}")  # Отладка
         return response.json()
     except requests.exceptions.RequestException as e:
-        print(f"Ошибка при переводе текста: {e}")
+        print(f"Error translating text: {e}")
         if e.response is not None:
-            print(f"Ответ сервера: {e.response.text}")  # Отладка
+            print(f"Server response: {e.response.text}")  # Отладка
         return None

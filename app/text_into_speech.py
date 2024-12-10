@@ -33,7 +33,7 @@ class TextToSpeech:
         :return: Путь к сгенерированному файлу.
         """
         if language not in self.VOICE_MAP or gender not in self.VOICE_MAP[language]:
-            raise ValueError(f"Неподдерживаемый язык ({language}) или пол ({gender}).")
+            raise ValueError(f"Unsupported language ({language}) or gender ({gender}).")
 
         voice_id = self.VOICE_MAP[language][gender]
 
@@ -50,5 +50,5 @@ class TextToSpeech:
             return output_file
 
         except (BotoCoreError, ClientError) as error:
-            logging.error(f"Ошибка AWS Polly: {error}")
-            raise RuntimeError("Ошибка при генерации речи.")
+            logging.error(f"AWS Polly error: {error}")
+            raise RuntimeError("Error when generating speech.")
