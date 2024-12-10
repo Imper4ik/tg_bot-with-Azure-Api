@@ -73,7 +73,7 @@ def is_user_spamming(user_id: int) -> bool:
 
 @router.message(CommandStart())
 async def cmd_start(message: types.Message):
-    await message.answer('full commands: \n '
+    await message.answer('full commands: \n\n '
                          '1 - full commands \n'
                          '2 - show your information \n'
                          '3 - help \n'
@@ -336,7 +336,7 @@ async def choose_language_for_audio(message: Message, state: FSMContext):
         if translated_text:
             await state.update_data(translated_text=translated_text, selected_language=selected_language)
             await message.reply(
-                f"Translated text: {translated_text}\n"
+                f"Translated text: {translated_text}\n\n"
                 f"Now, please select a voice: 'male' or 'female' ('male' is unavailable for 'pl').")
             await state.set_state(SpeechStates.waiting_for_gender_to_speech)
             logging.info("The status is set to: waiting_for_gender.")
