@@ -73,14 +73,14 @@ def is_user_spamming(user_id: int) -> bool:
 
 @router.message(CommandStart())
 async def cmd_start(message: types.Message):
-    await message.answer('full commands: \n\n '
-                         '1 - full commands \n'
-                         '2 - show your information \n'
-                         '3 - help \n'
-                         '4 - Voice_in_text \n'
-                         '5 - Translate \n'
-                         '6 - Text_to_Speech \n'
-                         '7 - handle_audio_to_speech', reply_markup=kb.commands_keyboard)
+    await message.answer('Full commands: \n '
+                         '1 - Full commands \n'
+                         '2 - Show your information \n'
+                         '3 - Help \n'
+                         '4 - Convert voice to text \n'
+                         '5 - Translation of text \n'
+                         '6 - Convert text to voice \n'
+                         '7 - Voice translation and dubbing', reply_markup=kb.commands_keyboard)
 
 
 @router.message(F.text)
@@ -112,19 +112,19 @@ async def handle_text_commands(message: Message, state: FSMContext):
     elif current_state == SpeechStates.waiting_for_gender_to_speech:
         await choose_voice_and_speak(message, state)
     else:
-        if message.text == 'full commands':
+        if message.text == 'Full commands':
             await cmd_start(message)
-        elif message.text == 'show your information':
+        elif message.text == 'Show your information':
             await show(message)
-        elif message.text == 'help':
+        elif message.text == 'Help':
             await get_help(message)
-        elif message.text == 'Voice_in_text':
+        elif message.text == 'Convert voice to text':
             await request_and_handle_voice_message(message)
-        elif message.text == 'Translate':
+        elif message.text == 'Translation of text':
             await start_translate(message, state)
-        elif message.text == 'Text_to_Speech':
+        elif message.text == 'Convert text to voice':
             await request_language_for_speech(message, state)
-        elif message.text == 'handle_audio_to_speech':
+        elif message.text == 'Voice translation and dubbing':
             await handle_audio_to_speech(message, state)
         else:
             await message.reply("Unknown command. Please select an option from the menu.")
