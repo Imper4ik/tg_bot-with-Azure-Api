@@ -7,11 +7,11 @@ from aiogram import F, Router, types
 from aiogram.filters import CommandStart, Command
 from aiogram.types import Message, FSInputFile
 from dotenv import load_dotenv
-from app.conver_voice_in_text import speech_to_text
+from app.conver_voice_to_text import speech_to_text
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import StatesGroup, State
-from app.text_into_speech import TextToSpeech
-from app.translate_text import translate_text
+from app.conver_text_to_speech import TextToSpeech
+from app.translation_of_text import translate_text
 
 
 logging.basicConfig(
@@ -74,13 +74,13 @@ def is_user_spamming(user_id: int) -> bool:
 @router.message(CommandStart())
 async def cmd_start(message: types.Message):
     await message.answer('Full commands: \n '
-                         '1 - Full commands \n'
-                         '2 - Show your information \n'
-                         '3 - Help \n'
-                         '4 - Convert voice to text \n'
-                         '5 - Translation of text \n'
-                         '6 - Convert text to voice \n'
-                         '7 - Voice translation and dubbing', reply_markup=kb.commands_keyboard)
+                         '  Full commands \n'
+                         '   Show your information \n'
+                         '   Help \n'
+                         '   Convert voice to text \n'
+                         '   Translation of text \n'
+                         '   Convert text to voice \n'
+                         '   Voice translation and dubbing', reply_markup=kb.commands_keyboard)
 
 
 @router.message(F.text)
@@ -98,13 +98,13 @@ async def handle_text_commands(message: Message, state: FSMContext):
     if current_state == TranslateStates.waiting_for_language.state:
         await choose_language(message, state)
     elif current_state == TranslateStates.waiting_for_text.state:
-        await handle_translate_text(message, state)
+        await handle_translation_of_text(message, state)
     elif current_state == SpeechStates.waiting_for_language:
         await handle_language_selection(message, state)
     elif current_state == SpeechStates.waiting_for_gender:
         await handle_gender_selection(message, state)
     elif current_state == SpeechStates.waiting_for_speech_text:
-        await handle_text_to_speech(message, state)
+        await handle_conver_text_to_voice(message, state)
     elif current_state == SpeechStates.waiting_for_audio:
         await process_audio(message, state)
     elif current_state == TranslateStates.waiting_for_language_to_speech:
@@ -119,7 +119,7 @@ async def handle_text_commands(message: Message, state: FSMContext):
         elif message.text == 'Help':
             await get_help(message)
         elif message.text == 'Convert voice to text':
-            await request_and_handle_voice_message(message)
+            await handle_voice_to_text(message)
         elif message.text == 'Translation of text':
             await start_translate(message, state)
         elif message.text == 'Convert text to voice':
@@ -142,7 +142,7 @@ async def get_help(message: types.Message):
 
 # Обработчик команды /Voice_in_text
 @router.message(Command('Voice_in_text'))
-async def request_and_handle_voice_message(message: Message):
+async def handle_voice_to_text(message: Message):
     await message.reply('Start recording a voice message.(only Eng)')
 
     # Ожидание голосового сообщения
@@ -180,7 +180,7 @@ async def choose_language(message: types.Message, state: FSMContext):
 
 # Обработка текста и его перевод
 @router.message(TranslateStates.waiting_for_text)
-async def handle_translate_text(message: types.Message, state: FSMContext):
+async def handle_translation_of_text(message: types.Message, state: FSMContext):
     data = await state.get_data()
     selected_language = data.get('selected_language')  # Получение выбранного языка
     text_to_translate = message.text
@@ -245,7 +245,7 @@ async def handle_gender_selection(message: types.Message, state: FSMContext):
 
 
 @router.message(SpeechStates.waiting_for_speech_text)
-async def handle_text_to_speech(message: types.Message, state: FSMContext):
+async def handle_conver_text_to_voice(message: types.Message, state: FSMContext):
     data = await state.get_data()
     language = data.get("language")
     gender = data.get("gender")
