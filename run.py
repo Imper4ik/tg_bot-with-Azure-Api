@@ -11,7 +11,7 @@ import logging
 load_dotenv()
 
 # Проверка наличия токена
-telegram_token = os.getenv('telegram_bot_token')
+telegram_token = os.getenv('TELEGRAM_BOT_TOKEN')
 if not telegram_token:
     logging.error("Telegram bot token not found in environment variables!")
     exit(1)
